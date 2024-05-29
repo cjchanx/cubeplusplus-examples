@@ -1,0 +1,76 @@
+@startuml
+skin rose
+
+' Notes: 
+' There's a lot of ways to do the B3 board, we could have the Board itself basically be a superloop handling all the I/O with primitive-style (non-tasked) drivers -- in this case ideally with a custom delay calculator class, or alternatively the board could itself be a primitive with everything else being a regular ol' rtos task with it's own rates. I kinda prefer the idea of each board functionally being a big ol' superloop with "primitive" drivers -- each driver must support taking in a special SPIInterface* for example.
+
+' System Primitives (Base Classes)
+abstract PriorityTask<size_t DEPTH> {
+    + PriorityTask<DEPTH>()
+    +{abstract} virtual void InitTask()
+    #{abstract} virtual void Run(void* pvParams)
+    
+    + void SendCommmand(Command c, uint8_t priority)
+    + void SendCommmandReference(Command& c, uint8_t priority)
+
+    - TaskHandle_t rtTaskHandle_
+    - PQueue<Command, DEPTH>* qEvtQueue_
+}
+
+class PriorityQueue<typename T, size_t SIZE> {
+    + PriorityQueue<T, SIZE>()
+    + bool Send(const T& item, uint8_t priority)
+    + bool Receive(T& item, uint32_t timeout)
+    + bool ReceiveWait(T& item)
+    + bool IsEmpty()
+    + bool IsFull()
+    + uint16_t GetCurrentCount()
+    + uint16_t GetMaxDepth()
+
+    - struct PriorityQueueItem { T data; uint8_t priority; seq_t order }
+    - TemplateQueue<uint8_t> rtQueue_
+    - etl::priority_queue<PriorityQueueItem, MAX_DEPTH> etlQueue_
+    - Mutex mtx_
+    - seq_t seqN_
+}
+
+class TemplateQueue<typename T> {
+    + TemplateQueue<T>()
+    + bool Send(const T& item)
+    + bool Receive(T& item, uint32_t timeout)
+    + bool ReceiveWait(T& item)
+    + bool IsEmpty()
+    + bool IsFull()
+    + uint16_t GetCurrentCount()
+    + uint16_t GetMaxDepth()
+
+    - Queue_HandleTypeDef rtQueueHandle_
+}
+
+PriorityTask *-- PriorityQueue
+PriorityQueue *-- TemplateQueue
+
+' Application Primitives
+
+abstract Board {
+    - BoardID id_
+
+    + Board(BoardID id)
+    
+    + virtual void Run(void* pvParams)
+    + void SPISend()
+    + void SPIReceive()
+}
+
+struct SPIBoardCommand {
+    - BoardID id_ (board select)
+    - ChipSel cs_ (chip select)
+}
+
+class SPIDataTask {
+
+}
+
+SPIDataTask *-- SPIBoardCommand
+
+@enduml
