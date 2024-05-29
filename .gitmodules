@@ -1,0 +1,3 @@
+[submodule "Basic_Debug/Cube++"]
+	path = Basic_Debug/Cube++
+	url = https://github.com/cjchanx/cubeplusplus-examples.git
